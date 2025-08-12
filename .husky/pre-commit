@@ -1,5 +1,0 @@
-echo "🔨 프로젝트 빌드 중..."
-pnpm build
-
-echo "🔍 ESLint 검사 중..."
-pnpm lint
