@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { useQueryClient } from "@tanstack/react-query";
 import NewsCard from "@/components/news/NewsCard";
-import { useGetCompanyWithNews } from "@/hooks/news/useGetCompanyWithNews";
+import {
+  useGetCompanyWithNews,
+  companyQueryKeys,
+} from "@/hooks/news/useGetCompanyWithNews";
+import { getCompanyWithNews } from "@/api/news/companyWithNews";
 import {
   Pagination,
   PaginationContent,
@@ -36,6 +41,7 @@ export default function NewsGrid({
 function NewsGridInternal({ companyId, itemsPerPage = 9 }: NewsGridProps) {
   const { data } = useGetCompanyWithNews(companyId);
   const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const paginatedData = useMemo(() => {
     if (!data?.newAll) return { items: [], totalPages: 0 };
@@ -51,6 +57,17 @@ function NewsGridInternal({ companyId, itemsPerPage = 9 }: NewsGridProps) {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  // 현재 페이지의 다음 페이지 프리페칭
+  useEffect(() => {
+    if (currentPage < paginatedData.totalPages) {
+      queryClient.prefetchQuery({
+        queryKey: companyQueryKeys.detail(companyId),
+        queryFn: () => getCompanyWithNews(companyId),
+        staleTime: 1000 * 60 * 5, // 5분
+      });
+    }
+  }, [currentPage, paginatedData.totalPages, companyId, queryClient]);
 
   const generatePageNumbers = () => {
     const { totalPages } = paginatedData;
@@ -77,7 +94,7 @@ function NewsGridInternal({ companyId, itemsPerPage = 9 }: NewsGridProps) {
 
   return (
     <>
-      <div className="max-tablet:grid-cols-2 mt-6 grid grid-cols-3 justify-items-center gap-4">
+      <div className="max-tablet:grid-cols-2 mt-6 grid grid-cols-3 gap-x-6 gap-y-10">
         {paginatedData.items.map((news, index) => (
           <NewsCard key={`news-${index}`} newsCard={news} />
         ))}
