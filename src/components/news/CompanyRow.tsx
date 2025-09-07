@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useGetNewsList } from "@/hooks/news/useGetNewsList";
 import { useIntersect } from "@/hooks/useIntersect";
@@ -15,16 +15,6 @@ import type {
 } from "@/api/generated/api/company-controller-api";
 
 export default function CompanyRow() {
-  return (
-    <ErrorBoundary fallback={<CompanyRowError />}>
-      <Suspense fallback={<CompanyRowSkeleton />}>
-        <CompanyRowInternal />
-      </Suspense>
-    </ErrorBoundary>
-  );
-}
-
-function CompanyRowInternal() {
   const [filters, setFilters] = useState<{
     types?: Set<SearchWithNewsTypesEnum>;
     jobGroups?: Set<SearchWithNewsJobGroupsEnum>;
@@ -74,21 +64,20 @@ function CompanyRowInternal() {
     return data.pages.flatMap((p) => p.content);
   }, [data]);
 
-  const ref = useIntersect<HTMLDivElement>(
-    () => {
-      if (hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    },
-    hasNextPage && !isFetchingNextPage && isFetched
-  );
+  const ref = useIntersect<HTMLDivElement>(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, hasNextPage && !isFetchingNextPage);
+
+  if (!isFetched) return <CompanyRowSkeleton />;
 
   return (
-    <>
+    <ErrorBoundary fallback={<CompanyRowError />}>
       {companies.map((company) => (
         <div
           key={company.company.id}
-          className="max-tablet:flex-col max-tablet:py-0 max-tablet:pb-11 flex w-full gap-6 py-11"
+          className="max-pc:flex-col max-pc:py-0 max-pc:pb-11 flex w-full gap-6 py-11"
         >
           <CompanyInfo variant="main" companyInfo={company.company} />
           <NewsCarousel newsCards={company.news} />
@@ -100,6 +89,6 @@ function CompanyRowInternal() {
         ref={ref}
         style={{ width: "1px", height: "1px", marginTop: "10px" }}
       />
-    </>
+    </ErrorBoundary>
   );
 }
